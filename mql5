@@ -1,0 +1,89 @@
+mql5
+#property copyright 'Forex Robot Easy Team'
+#property link      'forexroboteasy.com'
+
+// Ema 18 Forex Software
+// Developed by Forex Robot Easy Team
+
+extern int EmaPeriod = 18; // EMA period
+extern double TakeProfit = 50; // Fixed take profit in pips
+extern double StopLoss = 25; // Fixed stop loss in pips
+extern double MaxSpread = 10; // Maximum allowed spread in pips
+
+// Calculate dynamic lot size based on current balance
+double CalculateLotSize()
+{
+    double lotSize = MarketInfo(Symbol(), MODE_MARGINREQUIRED) / 1000;
+    return NormalizeDouble(lotSize, 2);
+}
+
+// Check if spread is within allowable range
+bool IsSpreadValid()
+{
+    double currentSpread = MarketInfo(Symbol(), MODE_SPREAD);
+    return currentSpread <= MaxSpread;
+}
+
+// Check if current trend is bullish
+bool IsBullishTrend()
+{
+    double ema = iMA(Symbol(), 0, EmaPeriod, 0, MODE_EMA, PRICE_CLOSE, 0);
+    double emaPrev = iMA(Symbol(), 0, EmaPeriod, 0, MODE_EMA, PRICE_CLOSE, 1);
+    return ema > emaPrev;
+}
+
+// Check if current trend is bearish
+bool IsBearishTrend()
+{
+    double ema = iMA(Symbol(), 0, EmaPeriod, 0, MODE_EMA, PRICE_CLOSE, 0);
+    double emaPrev = iMA(Symbol(), 0, EmaPeriod, 0, MODE_EMA, PRICE_CLOSE, 1);
+    return ema < emaPrev;
+}
+
+// Entry function
+void OnTick()
+{
+    if (!IsSpreadValid())
+    {
+        Comment('Spread is too high, waiting for better market conditions...');
+        return;
+    }
+
+    if (IsBullishTrend())
+    {
+        double lotSize = CalculateLotSize();
+
+        // Buy order
+        double entryPrice = Ask;
+        double takeProfit = entryPrice + TakeProfit * Point;
+        double stopLoss = entryPrice - StopLoss * Point;
+        int ticket = OrderSend(Symbol(), OP_BUY, lotSize, entryPrice, 0, stopLoss, takeProfit, 'Ema 18 Buy', 0, 0, Green);
+        if (ticket > 0)
+        {
+            Comment('Buy order placed successfully.');
+        }
+        else
+        {
+            Comment('Failed to place buy order: ', GetLastError());
+        }
+    }
+
+    if (IsBearishTrend())
+    {
+        double lotSize = CalculateLotSize();
+
+        // Sell order
+        double entryPrice = Bid;
+        double takeProfit = entryPrice - TakeProfit * Point;
+        double stopLoss = entryPrice + StopLoss * Point;
+        int ticket = OrderSend(Symbol(), OP_SELL, lotSize, entryPrice, 0, stopLoss, takeProfit, 'Ema 18 Sell', 0, 0, Red);
+        if (ticket > 0)
+        {
+            Comment('Sell order placed successfully.');
+        }
+        else
+        {
+            Comment('Failed to place sell order: ', GetLastError());
+        }
+    }
+}
